@@ -1,0 +1,951 @@
+/* SignalWatch — plain CSS, no framework.
+   Category colors (quiet/moderate/high) are an intensity scale, not a
+   good/bad judgment — the Attention Score never claims a move is good or
+   bad, only unusual. Price-change text IS red/green, since that's just
+   reporting direction, a factual convention in every finance UI, not
+   advice. */
+
+:root {
+  --color-bg: #f5f6f9;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fb;
+  --color-border: #e3e6eb;
+  --color-text: #171a21;
+  --color-text-muted: #666e7c;
+  --color-text-faint: #99a0ab;
+  --color-accent: #3b5bfd;
+  --color-accent-text: #ffffff;
+  --color-up: #1a7f37;
+  --color-down: #c4322f;
+  --color-live: #1a7f37;
+  --color-stale: #b45309;
+  --color-error-bg: #fdecea;
+  --color-error-text: #8a2622;
+  --color-error-border: #f3c6c1;
+
+  --quiet-bg: #eef0f4;
+  --quiet-text: #55606e;
+  --quiet-bar: #9aa4b2;
+
+  --moderate-bg: #e6ecff;
+  --moderate-text: #2f4bd6;
+  --moderate-bar: #3b5bfd;
+
+  --high-bg: #efe4ff;
+  --high-text: #6b21c9;
+  --high-bar: #8b3df0;
+
+  --shadow-card: 0 1px 2px rgba(20, 22, 30, 0.04), 0 1px 8px rgba(20, 22, 30, 0.04);
+  --shadow-card-hover: 0 4px 10px rgba(20, 22, 30, 0.07), 0 2px 4px rgba(20, 22, 30, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #101216;
+    --color-surface: #1a1d24;
+    --color-surface-alt: #20232b;
+    --color-border: #2b2f3a;
+    --color-text: #edeef2;
+    --color-text-muted: #9aa1ac;
+    --color-text-faint: #6b7280;
+    --color-accent: #7b93ff;
+    --color-accent-text: #0d1117;
+    --color-up: #4cc26a;
+    --color-down: #ef5a52;
+    --color-live: #4cc26a;
+    --color-stale: #e0a94e;
+    --color-error-bg: #3a1f1e;
+    --color-error-text: #f3a9a4;
+    --color-error-border: #5a2c29;
+
+    --quiet-bg: #262a33;
+    --quiet-text: #9aa1ac;
+    --quiet-bar: #6b7280;
+
+    --moderate-bg: #1f2747;
+    --moderate-text: #93a5ff;
+    --moderate-bar: #7b93ff;
+
+    --high-bg: #2b1f3d;
+    --high-text: #c79bff;
+    --high-bar: #a973ff;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 8px rgba(0, 0, 0, 0.25);
+    --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Several elements below (.summary-grid, .status-indicator, ...) set their
+   own `display` (grid/flex) for layout when visible. Without this rule,
+   that author `display` beats the browser's default `[hidden] { display:
+   none }` on specificity ties, so toggling the `hidden` attribute in JS
+   (e.g. `summaryGrid.hidden = true` for an empty watchlist) would silently
+   fail to actually hide the element. This restores `hidden` as the single
+   source of truth for visibility everywhere in this app. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Layout                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 1.25rem 3.5rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Header                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.app-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  margin-bottom: 2rem;
+}
+
+.header-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.brand h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.tagline {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-live);
+  flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot.dot-stale {
+  background: var(--color-stale);
+  animation: none;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(26, 127, 55, 0.35); }
+  50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(26, 127, 55, 0); }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Add-ticker form                                                         */
+/* ---------------------------------------------------------------------- */
+
+.add-ticker-section {
+  margin-bottom: 2rem;
+}
+
+#add-form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+#ticker-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+  text-transform: uppercase;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#ticker-input::placeholder {
+  color: var(--color-text-faint);
+  text-transform: none;
+}
+
+#ticker-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  /* Plain fallback first for browsers without color-mix(); the second
+     declaration simply won't apply there, leaving the fallback in place. */
+  box-shadow: 0 0 0 3px rgba(59, 91, 253, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+#add-button {
+  padding: 0.75rem 1.35rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+#add-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+#add-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#add-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* While a request is in flight, #add-button-label reads "Adding…" (set in
+   app.js) and this spinner appears next to it — a visible loading state,
+   not just a disabled button that gives no feedback. */
+#add-button:disabled::after {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.5em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  opacity: 0.85;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.input-hint {
+  margin: 0.5rem 0 0;
+  color: var(--color-text-faint);
+  font-size: 0.82rem;
+}
+
+.error-message {
+  margin: 0.6rem 0 0;
+  padding: 0.65rem 0.9rem;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error-text);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.loading-indicator {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Empty state                                                             */
+/* ---------------------------------------------------------------------- */
+
+.empty-state {
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 3rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.empty-state-icon {
+  color: var(--color-text-faint);
+  margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: var(--color-text);
+}
+
+.empty-state p {
+  margin: 0 auto 1.25rem;
+  max-width: 30rem;
+  font-size: 0.92rem;
+}
+
+#empty-state-cta {
+  padding: 0.7rem 1.4rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+#empty-state-cta:hover {
+  filter: brightness(1.08);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Summary cards                                                           */
+/* ---------------------------------------------------------------------- */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.summary-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  box-shadow: var(--shadow-card);
+}
+
+.summary-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+.summary-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+
+.summary-card.summary-high {
+  border-left-color: var(--high-bar);
+}
+
+.summary-card.summary-high .summary-value {
+  color: var(--high-text);
+}
+
+.summary-card.summary-moderate {
+  border-left-color: var(--moderate-bar);
+}
+
+.summary-card.summary-moderate .summary-value {
+  color: var(--moderate-text);
+}
+
+.summary-card.summary-quiet {
+  border-left-color: var(--quiet-bar);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Stock list + cards                                                      */
+/* ---------------------------------------------------------------------- */
+
+.stock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.stock-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.stock-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.stock-card.card-quiet {
+  border-left-color: var(--quiet-bar);
+}
+
+.stock-card.card-moderate {
+  border-left-color: var(--moderate-bar);
+}
+
+.stock-card.card-high {
+  border-left-color: var(--high-bar);
+}
+
+.stock-card.stock-card-unavailable {
+  border-left-color: var(--color-error-text);
+  background: var(--color-surface-alt);
+}
+
+/* --- Card header: ticker + badge + remove ------------------------------ */
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.card-ticker {
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+}
+
+.category-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--quiet-bg);
+  color: var(--quiet-text);
+}
+
+.category-badge.badge-quiet {
+  background: var(--quiet-bg);
+  color: var(--quiet-text);
+}
+
+.category-badge.badge-moderate {
+  background: var(--moderate-bg);
+  color: var(--moderate-text);
+}
+
+.category-badge.badge-high {
+  background: var(--high-bg);
+  color: var(--high-text);
+}
+
+.category-badge.badge-unavailable {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.remove-btn {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--color-text-faint);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.remove-btn:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.remove-btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Per-card removal in flight — guards against a double-click firing two
+   DELETE requests, and gives visible feedback instead of a button that
+   just silently stops responding. */
+.remove-btn.removing {
+  color: var(--color-text-faint);
+  opacity: 0.6;
+  animation: pulse-fade 1s ease-in-out infinite;
+}
+
+@keyframes pulse-fade {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* --- Price block --------------------------------------------------------- */
+
+.field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-faint);
+  margin-bottom: 0.2rem;
+}
+
+.price-block {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.price-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.price-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.price-change {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.price-change-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-faint);
+}
+
+.price-change-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.price-change-value.change-up {
+  color: var(--color-up);
+}
+
+.price-change-value.change-down {
+  color: var(--color-down);
+}
+
+.price-change-value.first-visit-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.market-context-value {
+  font-size: 0.8rem;
+  color: var(--color-text-faint);
+}
+
+.market-context-value.change-up {
+  color: var(--color-up);
+}
+
+.market-context-value.change-down {
+  color: var(--color-down);
+}
+
+/* --- Attention Score: the visual centerpiece ---------------------------- */
+
+.attention-block {
+  margin-bottom: 1.1rem;
+}
+
+.attention-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.attention-header .field-label {
+  margin-bottom: 0;
+}
+
+.attention-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.score-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.score-fill.fill-quiet {
+  background: var(--quiet-bar);
+}
+
+.score-fill.fill-moderate {
+  background: var(--moderate-bar);
+}
+
+.score-fill.fill-high {
+  background: linear-gradient(90deg, var(--high-bar), var(--moderate-bar));
+}
+
+/* --- Why this signal ------------------------------------------------------ */
+
+.section-heading {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+}
+
+.reasons-block {
+  margin-bottom: 0.9rem;
+}
+
+.reasons-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reasons-list li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.45;
+}
+
+.reasons-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0.15rem;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* --- Score breakdown (collapsible) --------------------------------------- */
+
+.breakdown-block {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.breakdown-block summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  user-select: none;
+}
+
+.breakdown-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.breakdown-block summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--color-text-faint);
+  transition: transform 0.15s ease;
+}
+
+.breakdown-block[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.breakdown-block summary:hover {
+  color: var(--color-text);
+}
+
+.breakdown-list {
+  margin: 0.75rem 0 0;
+  padding: 0.85rem 0.9rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.breakdown-row dt {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.breakdown-row dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-max {
+  font-weight: 500;
+  color: var(--color-text-faint);
+}
+
+/* --- Data status footer line --------------------------------------------- */
+
+.data-status {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
+}
+
+.data-status.status-stale {
+  color: var(--color-stale);
+  font-weight: 600;
+}
+
+.data-status.status-partial {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* --- Unavailable card ----------------------------------------------------- */
+
+.unavailable-message {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.unavailable-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-error-text);
+  word-break: break-word;
+}
+
+.unavailable-error-label {
+  font-weight: 700;
+}
+
+.unavailable-error-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Toasts (success/error confirmations)                                    */
+/* ---------------------------------------------------------------------- */
+
+.toast-region {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+  pointer-events: none;
+  width: min(92vw, 420px);
+}
+
+.toast {
+  pointer-events: auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: var(--shadow-card-hover);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-success {
+  background: var(--color-live);
+  color: #ffffff;
+}
+
+.toast-error {
+  background: var(--color-error-text);
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Footer                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.app-footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  color: var(--color-text-faint);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                              */
+/* ---------------------------------------------------------------------- */
+
+/* Tablet and desktop: the single-column, 760px-capped layout that works
+   fine on a phone leaves most of a wider screen empty. From ~860px up,
+   widen the page and let stock cards flow into as many columns as fit —
+   still one column on anything narrower, including tablets in portrait. */
+@media (min-width: 860px) {
+  .container,
+  .header-inner,
+  .app-footer {
+    max-width: 1160px;
+  }
+
+  .stock-list {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    align-items: stretch;
+  }
+
+  .stock-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* Pins the data-status footer line to the bottom of every card in a row,
+     so cards with a shorter reasons list don't look uneven next to taller
+     neighbors. */
+  .stock-card > .data-status {
+    margin-top: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-inner {
+    padding: 1.35rem 1rem;
+  }
+
+  .brand h1 {
+    font-size: 1.4rem;
+  }
+
+  #add-form {
+    flex-direction: column;
+  }
+
+  #add-button {
+    width: 100%;
+  }
+
+  .stock-card {
+    padding: 1rem;
+  }
+
+  .price-block {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .price-change {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+  }
+}

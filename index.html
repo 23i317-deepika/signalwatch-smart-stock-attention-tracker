@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignalWatch</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233b5bfd'/%3E%3Cpath d='M14 38 L26 26 L36 34 L50 18' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <h1>SignalWatch</h1>
+        <p class="tagline">Understand what moved — and why it matters.</p>
+      </div>
+      <div class="status-indicator" id="status-indicator" hidden>
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Market data live</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="add-ticker-section">
+      <form id="add-form" autocomplete="off">
+        <input
+          id="ticker-input"
+          type="text"
+          placeholder="Enter ticker symbol…"
+          maxlength="10"
+          aria-label="Ticker symbol"
+        />
+        <button type="submit" id="add-button">
+          <span id="add-button-label">+ Add to Watchlist</span>
+        </button>
+      </form>
+      <p class="input-hint">Try AAPL, MSFT, TSLA</p>
+      <p id="add-error" class="error-message" hidden></p>
+    </section>
+
+    <p id="load-error" class="error-message" hidden></p>
+    <p id="loading-indicator" class="loading-indicator" hidden>Loading your watchlist…</p>
+
+    <section id="empty-state" class="empty-state" hidden>
+      <div class="empty-state-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
+          <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2" opacity="0.25" />
+          <path d="M18 38 L27 28 L35 34 L46 20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="46" cy="20" r="3" fill="currentColor" />
+        </svg>
+      </div>
+      <h2>Your watchlist is ready.</h2>
+      <p>Add a stock ticker to start tracking movements that deserve your attention.</p>
+      <button type="button" id="empty-state-cta">Add your first ticker</button>
+    </section>
+
+    <section id="summary-grid" class="summary-grid" hidden>
+      <div class="summary-card">
+        <span class="summary-value" id="summary-total">0</span>
+        <span class="summary-label">Total Watchlist</span>
+      </div>
+      <div class="summary-card summary-high">
+        <span class="summary-value" id="summary-high">0</span>
+        <span class="summary-label">High Attention</span>
+      </div>
+      <div class="summary-card summary-moderate">
+        <span class="summary-value" id="summary-moderate">0</span>
+        <span class="summary-label">Moderate Activity</span>
+      </div>
+      <div class="summary-card summary-quiet">
+        <span class="summary-value" id="summary-quiet">0</span>
+        <span class="summary-label">Quiet</span>
+      </div>
+    </section>
+
+    <ul id="stock-list" class="stock-list"></ul>
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      SignalWatch remembers this browser with a private, local device ID — no account needed.
+      Clearing your browser's site data starts a fresh watchlist. This is a deliberate MVP
+      scope decision, not an oversight.
+    </p>
+  </footer>
+
+  <template id="stock-card-template">
+    <li class="stock-card">
+      <div class="card-header">
+        <span class="card-ticker"></span>
+        <span class="category-badge"></span>
+        <button type="button" class="remove-btn" aria-label="Remove from watchlist">&times;</button>
+      </div>
+
+      <div class="price-block">
+        <div class="price-main">
+          <span class="field-label">Current Price</span>
+          <span class="price-value"></span>
+        </div>
+        <div class="price-change">
+          <span class="price-change-label"></span>
+          <span class="price-change-value"></span>
+          <span class="market-context-value"></span>
+        </div>
+      </div>
+
+      <div class="attention-block">
+        <div class="attention-header">
+          <span class="field-label">Attention Score</span>
+          <span class="attention-value"></span>
+        </div>
+        <div class="score-track">
+          <div class="score-fill"></div>
+        </div>
+      </div>
+
+      <div class="reasons-block">
+        <h3 class="section-heading">Why this signal</h3>
+        <ul class="reasons-list"></ul>
+      </div>
+
+      <details class="breakdown-block">
+        <summary>How was this score calculated?</summary>
+        <dl class="breakdown-list">
+          <div class="breakdown-row">
+            <dt>Volatility-adjusted movement</dt>
+            <dd><span class="breakdown-value" data-component="volatility"></span> <span class="breakdown-max">/ 40</span></dd>
+          </div>
+          <div class="breakdown-row">
+            <dt>Volume anomaly</dt>
+            <dd><span class="breakdown-value" data-component="volume"></span> <span class="breakdown-max">/ 25</span></dd>
+          </div>
+          <div class="breakdown-row">
+            <dt>52-week range context</dt>
+            <dd><span class="breakdown-value" data-component="range"></span> <span class="breakdown-max">/ 20</span></dd>
+          </div>
+          <div class="breakdown-row">
+            <dt>Raw price movement</dt>
+            <dd><span class="breakdown-value" data-component="raw_move"></span> <span class="breakdown-max">/ 15</span></dd>
+          </div>
+        </dl>
+      </details>
+
+      <p class="data-status"></p>
+    </li>
+  </template>
+
+  <template id="unavailable-card-template">
+    <li class="stock-card stock-card-unavailable">
+      <div class="card-header">
+        <span class="card-ticker"></span>
+        <span class="category-badge badge-unavailable">Unavailable</span>
+        <button type="button" class="remove-btn" aria-label="Remove from watchlist">&times;</button>
+      </div>
+      <p class="unavailable-message">Market data is temporarily unavailable.</p>
+      <p class="unavailable-error"><span class="unavailable-error-label">Error:</span> <span class="unavailable-error-text"></span></p>
+    </li>
+  </template>
+
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="utils.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
