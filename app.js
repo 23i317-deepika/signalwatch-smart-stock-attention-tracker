@@ -30,7 +30,8 @@
  */
 
 // Change this if the backend isn't running on the default local port.
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  "https://signalwatch-smart-stock-attention-tracker.onrender.com";
 
 const DEVICE_ID_STORAGE_KEY = "signalwatch_device_id";
 
